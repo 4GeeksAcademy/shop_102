@@ -39,7 +39,7 @@ def handle_invalid_usage(error):
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
-
+print("hello word")
 
 @app.route('/user', methods=['GET'])
 def handle_hello():
