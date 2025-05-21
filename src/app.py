@@ -9,7 +9,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, User
-# esto es una prueba
+
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -37,7 +37,6 @@ def handle_invalid_usage(error):
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
-print("hello word")
 
 # Start: Endpoints
 
@@ -46,7 +45,6 @@ def create_token():
     pass
 
 # End: Endpoints
-
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
