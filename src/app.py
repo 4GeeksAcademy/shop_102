@@ -28,27 +28,24 @@ setup_admin(app)
 
 # Handle/serialize errors like a JSON object
 
-
 @app.errorhandler(APIException)
 def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
 # generate sitemap with all your endpoints
 
-
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
 
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
+# Start: Endpoints
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+@app.route('/token')
+def create_token():
+    pass
 
-    return jsonify(response_body), 200
+# End: Endpoints
 
 
 # this only runs if `$ python src/app.py` is executed
