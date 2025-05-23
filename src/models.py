@@ -22,12 +22,20 @@ class Product(db.Model):
     __tablename__ = "product"
 
     id: Mapped[int] = mapped_column(primary_key = True)
+    name: Mapped[str] = mapped_column(String(80), nullable = False)
     price: Mapped[float] = mapped_column(Float, nullable = False)
 
     users: Mapped[List["User"]] = relationship(secondary = "sale_detail", back_populates = "products")
     shops: Mapped[List["Shop"]] = relationship(secondary = "sale_detail", back_populates = "products")
 
     shop_inventory: Mapped[List["Shop"]] = relationship(secondary = "inventory", back_populates = "products_qty")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "price": self.price
+        }
 
 class Shop(db.Model):
     __tablename__ = "shop"
@@ -40,6 +48,13 @@ class Shop(db.Model):
     products: Mapped[List["Product"]] = relationship(secondary = "sale_detail", back_populates = "shops")
 
     products_qty: Mapped[List["Product"]] = relationship(secondary = "inventory", back_populates = "shop_inventory")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "location": self.location
+        }
 
 class Sale(db.Model):
     __tablename__ = "sale"

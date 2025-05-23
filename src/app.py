@@ -9,8 +9,8 @@ from flask_cors import CORS
 from sqlalchemy import and_, select
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
-from flask_jwt_extended import JWTManager, create_access_token
+from models import Product, Sale, Sale_Detail, Shop, db, User
+from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
@@ -26,7 +26,7 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.config["JWT_SECRET_KEY"] = os.getenv("SECRET_KEY")
-# app.config['JWT_VERIFY_SUB'] = False
+app.config['JWT_VERIFY_SUB'] = False
 jwt = JWTManager(app)
 
 MIGRATE = Migrate(app, db)
@@ -88,6 +88,73 @@ def login():
     
     access_token = create_access_token(identity = user.id)
     return { "token": access_token, "user_id": user.id }, 200
+
+@app.route('/shops')
+def get_all_shops():
+    all_shops = db.session.execute(select(Shop))
+    all_shops = list(map(lambda shop: shop.serialize(), all_shops))
+
+    return { "shops": all_shops }, 200
+
+@app.route('/shops/<int:shop_id>/products')
+def get_shop_products(shop_id):
+    shop = db.session.execute(select(Shop).where(Shop.id == shop_id)).scalar_one_or_none()
+
+    if shop is None:
+        return { "message": "La tienda no existe" }, 404
+    
+    products = []
+    for product in shop.products_qty:
+        products.append(product.serialize())
+
+    return { "products": products }, 200
+
+@app.route('/sale', methods = ['POST'])
+@jwt_required()
+def make_sale():
+    body = request.get_json(silent = True)
+
+    if body is None:
+        return { "message": "Debes enviarme los productos para la compra" }, 404
+    
+    if 'products' not in body:
+        return { "message": "No hay productos en el carrito" }, 404
+    
+    user_id = get_jwt_identity()
+    user = db.session.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+
+    if user is None:
+        return { "message": "El usuario no existe" }, 404
+
+    sale = Sale()
+    db.session.add(sale)
+    db.session.commit()
+
+    for product in body['products']:
+        sale_detail = Sale_Detail(user_id = user_id, product_id = product['product_id'], shop_id = product['shop_id'], sale_id = sale.id, qty = product['qty'])
+        sale.sale_detail.append(sale_detail)
+
+    db.session.commit()
+    return { "message": "Se ha creado la compra exitosamente", "sale_id": sale.id }, 200
+
+@app.route('/sale/<int:sale_id>')
+@jwt_required()
+def get_sale(sale_id):
+    sale = db.session.execute(select(Sale).where(Sale.id == sale_id)).scalar_one_or_none()
+
+    if sale is None:
+        return { "message": "La compra no existe" }, 404
+    
+    products = []
+    for detail in sale.sale_detail:
+        det = {
+            "product": db.session.execute(select(Product).where(Product.id == detail.product_id)).scalar_one_or_none().serialize(),
+            "shop": db.session.execute(select(Shop).where(Shop.id == detail.shop_id)).scalar_one_or_none().serialize(),
+            "qty": detail.qty
+        }
+        products.append(det)
+
+    return { "sale_detail": products }, 200
 # End: Endpoints
 
 # this only runs if `$ python src/app.py` is executed
